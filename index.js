@@ -137,7 +137,22 @@ async function run() {
 
 
 
-        
+        // --------------------------------- profile -------------------------------------
+
+
+        // updating profile
+        app.put('/profile', async (req, res) => {
+            const email = req.query.email;
+            const data = req.body;
+            const filter = { email };
+            const options = { upsert: true };
+            const updatedDoc = {
+                $set: {data}
+            };
+            const result = await profilesCollection.updateOne(filter, updatedDoc, options);
+            res.send(result);
+        });
+
 
 
 

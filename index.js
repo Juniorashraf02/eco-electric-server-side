@@ -21,17 +21,18 @@ const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology:
 
 function verifyJWT(req, res, next) {
     const authHeader = req.headers.authorization;
-    if(!authHeader){
-        return res.status(401).send('unauthorized access')
+
+    if (!authHeader) {
+        return res.status(401).send('unauthorized access!')
     }
     const token = authHeader.split(' ')[1];
-    jwt.sign(token, process.env.ACCESS_TOKEN, function(err, decoded) {
-        if(err){
-            return res.status(403).send('forbidden access');
+    jwt.verify(token, process.env.ACCESS_TOKEN, function (err, decoded) {
+        if (err) {
+            return res.status(403).send('forbidden access!');
         }
-        req.decoded=decoded;
+        req.decoded = decoded;
         next();
-      });
+    })
 }
 
 async function run() {
@@ -46,7 +47,13 @@ async function run() {
 
         // --------------------------------- tools -------------------------------------
         // tools api
-        app.get('/tools', verifyJWT,async (req, res) => {
+
+        app.post('/tools', async(req, res) => {
+            const toolsDetails = req.body;
+            const result = await toolsCollection.insertOne(toolsDetails);
+            res.send(result);
+        })
+        app.get('/tools', async (req, res) => {
             const query = {};
             const cursor = toolsCollection.find(query);
             const items = await cursor.toArray();
@@ -54,7 +61,7 @@ async function run() {
         });
 
         // getting a specific item by id
-        app.get('/tools/:id',verifyJWT, async (req, res) => {
+        app.get('/tools/:id', async (req, res) => {
             const id = req.params.id;
             const query = { _id: ObjectId(id) };
             const tool = await toolsCollection.findOne(query);
@@ -138,12 +145,17 @@ async function run() {
 
         // --------------------------------- orders -------------------------------------
 
-
+app.get('/admin/:email', async(req, res)=>{
+    const email = req.params.email;
+const user = await usersCollection.findOne({email:email});
+const isAdmin = user.role==='admin';
+res.send({admin: isAdmin}); 
+})
 
 
 
         // review api
-        app.get('/reviews', verifyJWT, async (req, res) => {
+        app.get('/reviews', async (req, res) => {
             const reviews = await reviewsCollection.find({}).toArray();
             res.send(reviews);
         });
@@ -190,8 +202,24 @@ async function run() {
             res.send({ result, token });
         });
 
+        app.put('/users/admin/:email',verifyJWT, async (req, res) => {
+            const email = req.params.email;
+            const requester = req.decoded.email;
+            const requesterAccount = await usersCollection.findOne({email: requester})
+            if(requesterAccount?.role==='admin') {
+                const filter = { email: email };
+                const updatedDoc = {
+                    $set: {role: 'admin'}
+                };
+                const result = usersCollection.updateOne(filter, updatedDoc);
+                res.send(result);
+            }else{
+                res.status(403).send('forbidden')
+            }
+        });
+
         app.get('/users', async(req,res)=>{
-            const users = await usersCollction.find().toArray();
+            const users = await usersCollection.find({}).toArray();
             res.send(users);
         })
 

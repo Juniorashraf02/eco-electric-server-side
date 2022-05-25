@@ -194,6 +194,11 @@ res.send({admin: isAdmin});
             res.send(result);
         });
 
+        app.get('/profile', async(req,res)=>{
+            const results = await profilesCollection.find({}).toArray();
+            res.send(results);
+        })
+
 
         // --------------------------------- users -------------------------------------
         app.put('/users/:email', async (req, res) => {

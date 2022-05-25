@@ -4,6 +4,7 @@ const cors = require('cors');
 const res = require('express/lib/response');
 const port = process.env.PORT || 5000;
 const app = express();
+const jwt = require('jsonwebtoken');
 
 // middleware
 app.use(cors());
@@ -18,6 +19,21 @@ const stripe = require("stripe")(process.env.STRIPE_KEY);
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.rsoub.mongodb.net/?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
+function verifyJWT(req, res, next) {
+    const authHeader = req.headers.authorization;
+    if(!authHeader){
+        return res.status(401).send('unauthorized access')
+    }
+    const token = authHeader.split(' ')[1];
+    jwt.sign(token, process.env.ACCESS_TOKEN, function(err, decoded) {
+        if(err){
+            return res.status(403).send('forbidden access');
+        }
+        req.decoded=decoded;
+        next();
+      });
+}
+
 async function run() {
     try {
         await client.connect();
@@ -30,7 +46,7 @@ async function run() {
 
         // --------------------------------- tools -------------------------------------
         // tools api
-        app.get('/tools', async (req, res) => {
+        app.get('/tools', verifyJWT,async (req, res) => {
             const query = {};
             const cursor = toolsCollection.find(query);
             const items = await cursor.toArray();
@@ -38,7 +54,7 @@ async function run() {
         });
 
         // getting a specific item by id
-        app.get('/tools/:id', async (req, res) => {
+        app.get('/tools/:id',verifyJWT, async (req, res) => {
             const id = req.params.id;
             const query = { _id: ObjectId(id) };
             const tool = await toolsCollection.findOne(query);
@@ -59,10 +75,10 @@ async function run() {
             res.send(result);
         });
 
-        // --------------------------------- tools -------------------------------------
+        // --------------------------------- tools ends-------------------------------------
 
 
-        // --------------------------------- orders -------------------------------------
+        // --------------------------------- orders starts-------------------------------------
 
         // order details posting
         app.post('/orders', async (req, res) => {
@@ -78,12 +94,17 @@ async function run() {
         // })
 
         // specific users orders collection 
-        app.get('/orders', async (req, res) => {
+        app.get('/orders', verifyJWT, async (req, res) => {
             const email = req.query.email;
-            const query = { email };
-            const cursor = ordersCollection.find(query);
-            const items = await cursor.toArray();
-            res.send(items);
+            const decodedEmail = req.decoded.email;
+            if(email === decodedEmail){
+                const query = { email };
+                const cursor = ordersCollection.find(query);
+                const items = await cursor.toArray();
+                return res.send(items);
+            }else{
+                return res.status(403).send('forbidden access');
+            }
         });
 
         // getting orders by id in payment section
@@ -122,13 +143,13 @@ async function run() {
 
 
         // review api
-        app.get('/reviews', async (req, res) => {
+        app.get('/reviews', verifyJWT, async (req, res) => {
             const reviews = await reviewsCollection.find({}).toArray();
             res.send(reviews);
         });
 
 
-        app.post('/reviews', async (req, res)=>{
+        app.post('/reviews', async (req, res) => {
             const reviewDetails = req.body;
             const result = await reviewsCollection.insertOne(reviewDetails);
             res.send(result);
@@ -148,7 +169,7 @@ async function run() {
             const filter = { email };
             const options = { upsert: true };
             const updatedDoc = {
-                $set: {data}
+                $set: { data }
             };
             const result = await profilesCollection.updateOne(filter, updatedDoc, options);
             res.send(result);
@@ -156,23 +177,29 @@ async function run() {
 
 
         // --------------------------------- users -------------------------------------
-        app.put('/users/:email', async (req, res)=>{
+        app.put('/users/:email', async (req, res) => {
             const email = req.params.email;
-            const filter = {email: email};
-            const options = {upsert: true};
+            const filter = { email: email };
+            const options = { upsert: true };
             const user = req.body;
             const updatedDoc = {
                 $set: user
             };
             const result = usersCollection.updateOne(filter, updatedDoc, options);
-            res.send(result);
+            const token = jwt.sign({ email: email }, process.env.ACCESS_TOKEN, { expiresIn: '1h' })
+            res.send({ result, token });
+        });
+
+        app.get('/users', async(req,res)=>{
+            const users = await usersCollction.find().toArray();
+            res.send(users);
         })
 
 
 
 
         // --------------------------------- payment -------------------------------------
-        app.post('/create-payment-intent',  async (req, res) => {
+        app.post('/create-payment-intent', async (req, res) => {
             const serive = req.body;
             const price = serive.price;
             const amount = price * 100;

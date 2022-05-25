@@ -68,6 +68,13 @@ async function run() {
             res.send(tool);
         });
 
+        app.delete('/tools/:id', async(req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id)}
+            const results = await toolsCollection.deleteOne(query);
+            res.send(results);
+        })
+
 
         // updating quantity
         app.put('/tools/:id', async (req, res) => {

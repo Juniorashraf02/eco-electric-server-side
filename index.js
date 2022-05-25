@@ -25,6 +25,7 @@ async function run() {
         const reviewsCollection = client.db('eco-electric').collection('reviews');
         const ordersCollection = client.db('eco-electric').collection('orders');
         const profilesCollection = client.db('eco-electric').collection('profile');
+        const usersCollection = client.db('eco-electric').collection('users');
 
 
         // --------------------------------- tools -------------------------------------
@@ -154,7 +155,18 @@ async function run() {
         });
 
 
-
+        // --------------------------------- users -------------------------------------
+        app.put('/users/:email', async (req, res)=>{
+            const email = req.params.email;
+            const filter = {email: email};
+            const options = {upsert: true};
+            const user = req.body;
+            const updatedDoc = {
+                $set: user
+            };
+            const result = usersCollection.updateOne(filter, updatedDoc, options);
+            res.send(result);
+        })
 
 
 

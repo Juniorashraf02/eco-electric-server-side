@@ -48,7 +48,7 @@ async function run() {
         // --------------------------------- tools -------------------------------------
         // tools api
 
-        app.post('/tools', async(req, res) => {
+        app.post('/tools', async (req, res) => {
             const toolsDetails = req.body;
             const result = await toolsCollection.insertOne(toolsDetails);
             res.send(result);
@@ -68,9 +68,9 @@ async function run() {
             res.send(tool);
         });
 
-        app.delete('/tools/:id', async(req, res) => {
+        app.delete('/tools/:id', async (req, res) => {
             const id = req.params.id;
-            const query = { _id: ObjectId(id)}
+            const query = { _id: ObjectId(id) }
             const results = await toolsCollection.deleteOne(query);
             res.send(results);
         })
@@ -101,18 +101,18 @@ async function run() {
             res.send(result);
         });
 
-       
+
 
         // specific users orders collection 
         app.get('/orders', verifyJWT, async (req, res) => {
             const email = req.query.email;
             const decodedEmail = req.decoded.email;
-            if(email === decodedEmail){
+            if (email === decodedEmail) {
                 const query = { email };
                 const cursor = ordersCollection.find(query);
                 const items = await cursor.toArray();
                 return res.send(items);
-            }else{
+            } else {
                 return res.status(403).send('forbidden access');
             }
         });
@@ -146,20 +146,20 @@ async function run() {
             res.send(result);
         });
 
-         // getting all orders 
-        app.get('/orders', async (req, res)=>{
-            const orders= await ordersCollection.find().toArray();
+        // getting all orders 
+        app.get('/orders', async (req, res) => {
+            const orders = await ordersCollection.find().toArray();
             res.send(orders);
         })
 
         // --------------------------------- orders -------------------------------------
 
-app.get('/admin/:email', async(req, res)=>{
-    const email = req.params.email;
-const user = await usersCollection.findOne({email:email});
-const isAdmin = user.role==='admin';
-res.send({admin: isAdmin}); 
-})
+        app.get('/admin/:email', async (req, res) => {
+            const email = req.params.email;
+            const user = await usersCollection.findOne({ email: email });
+            const isAdmin = user.role === 'admin';
+            res.send({ admin: isAdmin });
+        })
 
 
 
@@ -196,10 +196,10 @@ res.send({admin: isAdmin});
             res.send(result);
         });
 
-        app.get('/profile', async(req,res)=>{
+        app.get('/profile', async (req, res) => {
             const email = req.query.email;
-            const query = {email}
-            const results = await profilesCollection.findOne(query)
+            // const query = { email }
+            const results = await profilesCollection.findOne({ email: email })
             res.send(results);
         })
 
@@ -218,23 +218,23 @@ res.send({admin: isAdmin});
             res.send({ result, token });
         });
 
-        app.put('/users/admin/:email',verifyJWT, async (req, res) => {
+        app.put('/users/admin/:email', verifyJWT, async (req, res) => {
             const email = req.params.email;
             const requester = req.decoded.email;
-            const requesterAccount = await usersCollection.findOne({email: requester})
-            if(requesterAccount?.role==='admin') {
+            const requesterAccount = await usersCollection.findOne({ email: requester })
+            if (requesterAccount?.role === 'admin') {
                 const filter = { email: email };
                 const updatedDoc = {
-                    $set: {role: 'admin'}
+                    $set: { role: 'admin' }
                 };
                 const result = usersCollection.updateOne(filter, updatedDoc);
                 res.send(result);
-            }else{
+            } else {
                 res.status(403).send('forbidden')
             }
         });
 
-        app.get('/users', async(req,res)=>{
+        app.get('/users', async (req, res) => {
             const users = await usersCollection.find({}).toArray();
             res.send(users);
         })

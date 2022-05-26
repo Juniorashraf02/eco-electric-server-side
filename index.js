@@ -101,11 +101,7 @@ async function run() {
             res.send(result);
         });
 
-        // getting all orders 
-        // app.get('/orders', async (req, res)=>{
-        //     const orders= await ordersCollection.find({}).toArray();
-        //     res.send(orders);
-        // })
+       
 
         // specific users orders collection 
         app.get('/orders', verifyJWT, async (req, res) => {
@@ -149,6 +145,12 @@ async function run() {
             const result = await ordersCollection.updateOne(filter, updatedDoc, options);
             res.send(result);
         });
+
+         // getting all orders 
+        app.get('/orders', async (req, res)=>{
+            const orders= await ordersCollection.find().toArray();
+            res.send(orders);
+        })
 
         // --------------------------------- orders -------------------------------------
 
@@ -195,7 +197,9 @@ res.send({admin: isAdmin});
         });
 
         app.get('/profile', async(req,res)=>{
-            const results = await profilesCollection.find({}).toArray();
+            const email = req.query.email;
+            const query = {email}
+            const results = await profilesCollection.findOne(query)
             res.send(results);
         })
 
